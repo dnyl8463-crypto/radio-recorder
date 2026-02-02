@@ -5,29 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ארכיון הקלטות רדיו</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; }
-        .folder-container { margin-top: 20px; border: 2px solid #3498db; border-radius: 10px; overflow: hidden; }
-        iframe { width: 100%; height: 600px; border: none; }
-        .instructions { background: #e8f4fd; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 0.9em; color: #2980b9; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; margin-bottom: 10px; }
+        .status { color: #34a853; font-weight: bold; margin-bottom: 20px; }
+        .drive-frame { width: 100%; height: 650px; border: 2px solid #e0e0e0; border-radius: 12px; }
+        .btn-share { display: inline-block; background: #1a73e8; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; margin-top: 20px; transition: 0.3s; }
+        .btn-share:hover { background: #1557b0; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📻 ארכיון שידורים</h1>
-    <p>כאן תוכלו למצוא את כל ההקלטות של קול חי, קול ברמה, קול פליי וקול חי מיוזיק מהימים האחרונים.</p>
-    
-    <div class="instructions">
-        💡 <b>טיפ:</b> כדי לשמוע הקלטה, היכנסו לתיקייה של התחנה הרצויה ולחצו פעמיים על הקובץ.
-    </div>
+    <h1>📻 ארכיון הקלטות הרדיו שלי</h1>
+    <p class="status">● המערכת פעילה ומקליטה</p>
 
     <div class="folder-container">
-        <iframe src="https://drive.google.com/embeddedfolderview?id=1g4wD9diG4Y4DCGhkjnagkZ0qXPti1glu#list"></iframe>
+        <iframe class="drive-frame" src="https://drive.google.com/embeddedfolderview?id=1g4wD9diG4Y4DCGhkjnagkZ0qXPti1glu#list"></iframe>
     </div>
+
+    <br>
+    <a href="https://dnyl8463-crypto.github.io/radio-recorder/" class="btn-share">🔗 שלח קישור לחבר</a>
     
-    <p style="margin-top: 20px; font-size: 0.8em; color: #95a5a6;">המערכת מתעדכנת אוטומטית בכל שעה עגולה (למעט שבתות וחגים).</p>
+    <p style="font-size: 12px; color: #777; margin-top: 30px;">נוצר עבור dnyl8463-crypto | כל הזכויות שמורות לתחנות הרדיו</p>
 </div>
 
 </body>
