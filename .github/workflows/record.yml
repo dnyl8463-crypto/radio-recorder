@@ -1,23 +1,28 @@
 name: Radio Recorder
+
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *' # רץ כל שעה עגולה
+  workflow_dispatch: # מאפשר הרצה ידנית
 
 jobs:
   record:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Python
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib requests
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests
+
       - name: Run Script
         env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
         run: python main.py
