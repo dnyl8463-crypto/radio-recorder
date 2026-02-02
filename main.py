@@ -8,8 +8,7 @@ from googleapiclient.http import MediaFileUpload
 import requests
 
 # הגדרות
-# ID של התיקייה הראשית בדרייב
-PARENT_FOLDER_ID = '1g4wD9diG4Y4DCGhkjnagkZ0qXPti1glu'
+PARENT_FOLDER_ID = '12UDAp_Gr86BnA7qGWnFTNWlIRNKeQtnI'
 
 STREAMS = {
     "קול חי": "https://bit.ly/3S1R9Z9",
@@ -44,12 +43,12 @@ def get_or_create_folder(service, folder_name, parent_id):
 def upload_to_drive(service, file_name, file_path, folder_id):
     file_metadata = {'name': file_name, 'parents': [folder_id]}
     media = MediaFileUpload(file_path, mimetype='audio/mpeg', resumable=True)
-    # התיקון כאן: הוספת supportsAllDrives=True
+    # תיקון קריטי למניעת שגיאת מכסה (Quota)
     file = service.files().create(
         body=file_metadata, 
         media_body=media, 
         fields='id',
-        supportsAllDrives=True 
+        supportsAllDrives=True
     ).execute()
     return file.get('id')
 
@@ -71,13 +70,14 @@ def record_stream(name, url, duration):
         return None
 
 def delete_old_files(service):
-    print("בודק אם יש קבצים ישנים למחיקה (מעל 3 ימים)...")
     three_days_ago = (datetime.datetime.now() - datetime.timedelta(days=3)).isoformat() + 'Z'
     query = f"modifiedTime < '{three_days_ago}' and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
-    results = service.files().list(q=query, fields="files(id, name)").execute().get('files', [])
-    for f in results:
-        print(f"מוחק קובץ ישן: {f['name']}")
-        service.files().delete(fileId=f['id'], supportsAllDrives=True).execute()
+    try:
+        results = service.files().list(q=query, fields="files(id, name)").execute().get('files', [])
+        for f in results:
+            service.files().delete(fileId=f['id'], supportsAllDrives=True).execute()
+    except:
+        pass
 
 def main():
     service = get_drive_service()
