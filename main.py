@@ -84,8 +84,8 @@ def main():
             filename = f"{name}_{now_str}.mp3"
             print(f"מקליט את {name}...")
             
-            # הקלטה של 10 שניות (10 שניות)
-            subprocess.run(['ffmpeg', '-i', url, '-t', '10', '-acodec', 'libmp3lame', '-ab', '64k', filename], check=True)
+            # הקלטה של שעה (60 דקות)
+            subprocess.run(['ffmpeg', '-i', url, '-t', '3600', '-acodec', 'libmp3lame', '-ab', '64k', filename], check=True)
             
             print(f"מעלה את {filename}...")
             file_metadata = {'name': filename, 'parents': [folder_id]}
