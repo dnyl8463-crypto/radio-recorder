@@ -1,100 +1,98 @@
 import os
-import requests
-import subprocess
+import time
 import datetime
 import json
-import time
-from google.oauth2.service_account import Credentials
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+import requests
 
 # הגדרות
-PARENT_FOLDER_ID = "1g4wD9diG4Y4DCGhkjnagkZ0qXPti1glu"
-STATIONS = {
-    "קול חי": "https://live.kcm.fm/live-new",
-    "קול ברמה": "https://cdn.cybercdn.live/Kol_Barama/Live_Audio/icecast.audio",
-    "קול חי מיוזיק": "https://live.kcm.fm/livemusic",
-    "קול פליי": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
+# ID של התיקייה הראשית בדרייב
+PARENT_FOLDER_ID = '1g4wD9diG4Y4DCGhkjnagkZ0qXPti1glu'
+
+STREAMS = {
+    "קול חי": "https://bit.ly/3S1R9Z9",
+    "קול ברמה": "https://live.kol-barama.co.il/live/kolbarama/playlist.m3u8",
+    "קול חי מיוזיק": "https://bit.ly/3S4kG2R",
+    "קול פליי": "https://live.kol-play.co.il/live/kolplay/playlist.m3u8"
 }
 
-# הגדרת מספר הימים לשמירת קבצים
-DAYS_TO_KEEP = 3 
-
-def is_shabbat():
-    try:
-        res = requests.get("https://www.hebcal.com/shabbat?cfg=json&geo=pos&lat=31.7683&lon=35.2137&m=50").json()
-        now = datetime.datetime.now(datetime.timezone.utc)
-        items = res['items']
-        start = datetime.datetime.fromisoformat(next(i['date'] for i in items if i['category'] == 'candles'))
-        end = datetime.datetime.fromisoformat(next(i['date'] for i in items if i['category'] == 'havdalah'))
-        return start <= now <= end
-    except:
-        return False
+# זמן הקלטה בשניות (30 לבדיקה, שנה ל-3600 אחרי שזה עובד)
+RECORD_DURATION = 30 
 
 def get_drive_service():
-    creds_json = os.environ.get('GOOGLE_CREDENTIALS')
-    if not creds_json:
-        raise Exception("Missing GOOGLE_CREDENTIALS secret")
-    info = json.loads(creds_json)
-    creds = Credentials.from_service_account_info(info, scopes=['https://www.googleapis.com/auth/drive'])
+    scopes = ['https://www.googleapis.com/auth/drive']
+    service_account_info = json.loads(os.environ['GOOGLE_CREDENTIALS'])
+    creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=scopes)
     return build('drive', 'v3', credentials=creds)
 
-def get_or_create_folder(service, name):
-    query = f"name = '{name}' and '{PARENT_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-    results = service.files().list(q=query).execute().get('files', [])
+def get_or_create_folder(service, folder_name, parent_id):
+    query = f"name = '{folder_name}' and '{parent_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    results = service.files().list(q=query, fields="files(id)").execute().get('files', [])
     if results:
         return results[0]['id']
-    file_metadata = {'name': name, 'mimeType': 'application/vnd.google-apps.folder', 'parents': [PARENT_FOLDER_ID]}
-    folder = service.files().create(body=file_metadata, fields='id').execute()
+    
+    folder_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder',
+        'parents': [parent_id]
+    }
+    folder = service.files().create(body=folder_metadata, fields='id', supportsAllDrives=True).execute()
     return folder.get('id')
 
+def upload_to_drive(service, file_name, file_path, folder_id):
+    file_metadata = {'name': file_name, 'parents': [folder_id]}
+    media = MediaFileUpload(file_path, mimetype='audio/mpeg', resumable=True)
+    # התיקון כאן: הוספת supportsAllDrives=True
+    file = service.files().create(
+        body=file_metadata, 
+        media_body=media, 
+        fields='id',
+        supportsAllDrives=True 
+    ).execute()
+    return file.get('id')
+
+def record_stream(name, url, duration):
+    file_name = f"{name}_{datetime.datetime.now().strftime('%d-%m-%Y_%H-%M')}.mp3"
+    print(f"מקליט את {name}...")
+    try:
+        response = requests.get(url, stream=True, timeout=10)
+        with open(file_name, 'wb') as f:
+            start_time = time.time()
+            for chunk in response.iter_content(chunk_size=1024*1024):
+                if time.time() - start_time > duration:
+                    break
+                if chunk:
+                    f.write(chunk)
+        return file_name
+    except Exception as e:
+        print(f"שגיאה בהקלטת {name}: {e}")
+        return None
+
 def delete_old_files(service):
-    print(f"בודק אם יש קבצים ישנים למחיקה (מעל {DAYS_TO_KEEP} ימים)...")
-    # חישוב התאריך של לפני X ימים
-    cutoff_date = datetime.datetime.now() - datetime.timedelta(days=DAYS_TO_KEEP)
-    cutoff_iso = cutoff_date.isoformat() + "Z"
-    
-    # חיפוש קבצים ישנים בתוך התיקייה הראשית (כולל תתי תיקיות)
-    query = f"modifiedTime < '{cutoff_iso}' and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
+    print("בודק אם יש קבצים ישנים למחיקה (מעל 3 ימים)...")
+    three_days_ago = (datetime.datetime.now() - datetime.timedelta(days=3)).isoformat() + 'Z'
+    query = f"modifiedTime < '{three_days_ago}' and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
     results = service.files().list(q=query, fields="files(id, name)").execute().get('files', [])
-    
-    for file in results:
-        try:
-            print(f"מוחק קובץ ישן: {file['name']}")
-            service.files().delete(fileId=file['id']).execute()
-        except Exception as e:
-            print(f"שגיאה במחיקת קובץ: {e}")
+    for f in results:
+        print(f"מוחק קובץ ישן: {f['name']}")
+        service.files().delete(fileId=f['id'], supportsAllDrives=True).execute()
 
 def main():
-    if is_shabbat():
-        print("שבת עכשיו - המערכת בהפסקה.")
-        return
-
     service = get_drive_service()
-    
-    # שלב הניקוי: מוחק קבצים ישנים לפני שמתחיל להקליט חדשים
     delete_old_files(service)
     
-    # שעון ישראל (UTC+2)
-    now_str = (datetime.datetime.now() + datetime.timedelta(hours=2)).strftime("%d-%m-%Y_%H-00")
-
-    for name, url in STATIONS.items():
-        try:
-            folder_id = get_or_create_folder(service, name)
-            filename = f"{name}_{now_str}.mp3"
-            print(f"מקליט את {name}...")
-            
-            # הקלטה של 30 שניות (30 שניות)
-            subprocess.run(['ffmpeg', '-i', url, '-t', '30', '-acodec', 'libmp3lame', '-ab', '64k', filename], check=True)
-            
-            print(f"מעלה את {filename}...")
-            file_metadata = {'name': filename, 'parents': [folder_id]}
-            media = MediaFileUpload(filename, mimetype='audio/mpeg')
-            service.files().create(body=file_metadata, media_body=media).execute()
-            
-            os.remove(filename)
-        except Exception as e:
-            print(f"שגיאה בטיפול ב-{name}: {e}")
+    for name, url in STREAMS.items():
+        file_path = record_stream(name, url, RECORD_DURATION)
+        if file_path:
+            folder_id = get_or_create_folder(service, name, PARENT_FOLDER_ID)
+            print(f"מעלה את {file_path}...")
+            try:
+                upload_to_drive(service, file_path, file_path, folder_id)
+                os.remove(file_path)
+            except Exception as e:
+                print(f"שגיאה בטיפול ב-{name}: {e}")
 
 if __name__ == "__main__":
     main()
