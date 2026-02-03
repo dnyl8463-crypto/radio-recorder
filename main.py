@@ -2,7 +2,8 @@ import subprocess
 import datetime
 import threading
 import requests
-import time # הוספנו ספריית זמן
+import time
+import os
 
 STREAMS = {
     "Kol_Chai": "https://cdn.livecast.co.il/radio-kolchai-mp3/stream",
@@ -11,7 +12,7 @@ STREAMS = {
     "Kol_Play": "http://live.streamgates.net/radio/kolplay/icecast.audio"
 }
 
-# נסה לשנות ל-60 רק לבדיקה אחת, ואז תחזיר ל-3600
+# לבדיקה עכשיו: שנה ל-60. אחרי שתראה שזה עובד, תחזיר ל-3600.
 RECORD_DURATION = 60 
 
 def is_it_shabbat():
@@ -32,19 +33,27 @@ def record_stream(name, url, duration):
     timestamp = datetime.datetime.now().strftime('%H-%M')
     file_name = f"{name}_{timestamp}.mp3"
     
-    # פקודה חזקה יותר עם reconnect וזמני המתנה
+    # פקודה משופרת עם User-Agent של דפדפן וניסיונות התחברות
     command = [
         'ffmpeg', '-y',
+        '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '20',
-        '-i', url, '-t', str(duration), '-acodec', 'copy', file_name
+        '-i', url, 
+        '-t', str(duration), 
+        '-acodec', 'copy', 
+        file_name
     ]
     
     try:
-        print(f"--- Attempting to connect to {name} ---")
+        print(f"--- Starting {name} ---")
         subprocess.run(command, check=True, timeout=duration + 300)
-        print(f"✅ Success: {file_name}")
+        
+        if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
+            print(f"✅ File created successfully: {file_name} ({os.path.getsize(file_name)} bytes)")
+        else:
+            print(f"⚠️ {name} finished but file is empty or missing.")
     except Exception as e:
-        print(f"❌ Failed {name}: {e}")
+        print(f"❌ Error with {name}: {e}")
 
 def main():
     if is_it_shabbat():
@@ -53,12 +62,10 @@ def main():
 
     threads = []
     for name, url in STREAMS.items():
-        # הפעלת כל הקלטה בהפרש של 10 שניות מהקודמת
         t = threading.Thread(target=record_stream, args=(name, url, RECORD_DURATION))
         threads.append(t)
         t.start()
-        print(f"Waiting 10 seconds before next station...")
-        time.sleep(10) 
+        time.sleep(5) # דיליי קטן בין התחנות
     
     for t in threads:
         t.join()
