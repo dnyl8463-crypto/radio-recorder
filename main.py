@@ -1,7 +1,7 @@
 import os
 import subprocess
 import datetime
-import threading # ספרייה המאפשרת להריץ כמה דברים ביחד
+import threading
 
 STREAMS = {
     "Kol_Chai": "https://cdn.livecast.co.il/radio-kolchai-mp3/stream",
@@ -10,16 +10,17 @@ STREAMS = {
     "Kol_Play": "http://live.streamgates.net/radio/kolplay/icecast.audio"
 }
 
-# נניח שאתה רוצה להקליט שעה (3600 שניות)
+# הגדר כאן כמה שניות להקליט (למשל 3600 לשעה שלמה)
 RECORD_DURATION = 3600 
 
 def record_stream(name, url, duration):
-    # שימוש בזמן ישראל (בהנחה שהגדרת TZ ב-Workflow)
+    # הזמן ייקלח מהגדרת ה-TZ ב-Workflow
     timestamp = datetime.datetime.now().strftime('%H-%M')
     file_name = f"{name}_{timestamp}.mp3"
     
-    print(f"--- Starting parallel recording for: {name} ---")
+    print(f"Starting recording: {name} for {duration} seconds...")
     
+    # פקודת FFmpeg יעילה שפשוט מעתיקה את הזרם בלי לאמץ את המעבד
     command = [
         'ffmpeg', '-y', '-i', url, '-t', str(duration),
         '-acodec', 'copy', file_name
@@ -33,14 +34,11 @@ def record_stream(name, url, duration):
 
 def main():
     threads = []
-    
-    # יצירת "תהליכון" לכל תחנה כדי שירוצו במקביל
     for name, url in STREAMS.items():
         t = threading.Thread(target=record_stream, args=(name, url, RECORD_DURATION))
         threads.append(t)
         t.start()
     
-    # מחכים שכל ההקלטות יסתיימו (זה ייקח שעה אחת סך הכל)
     for t in threads:
         t.join()
     
