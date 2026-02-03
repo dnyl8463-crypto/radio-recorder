@@ -14,7 +14,7 @@ STREAMS = {
 RECORD_DURATION = 3600 # משך הקלטה של שעה אחת
 
 def record_stream(name, url, duration):
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    timestamp = datetime.datetime.now().strftime('%H-%M')
     file_name = f"{name}_{timestamp}.mp3"
     
     print(f"--- Starting FFmpeg recording for: {name} ---")
