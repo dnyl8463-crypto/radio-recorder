@@ -11,7 +11,7 @@ STREAMS = {
     "Kol_Play": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
 }
 
-RECORD_DURATION = 60 # משך הקלטה של דקה אחת
+RECORD_DURATION = 3600 # משך הקלטה של שעה אחת
 
 def record_stream(name, url, duration):
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
