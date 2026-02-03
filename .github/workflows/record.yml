@@ -2,17 +2,21 @@ name: Radio Recorder to Releases
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *' # רץ בכל שעה עגולה
+  workflow_dispatch: # מאפשר לך להריץ ידנית
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # חשוב מאוד ליצירת ה-Release
+      contents: write # חשוב כדי לאפשר העלאת קבצים ל-Releases
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Install FFmpeg
+        # השורה הזו היא הקסם שחסר לנו!
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -29,7 +33,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: recordings-${{ github.run_id }}
-          name: הקלטות מהתאריך ${{ github.event.repository.updated_at }}
+          name: הקלטות מהתאריך ${{ github.run_id }}
           files: "*.mp3"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
