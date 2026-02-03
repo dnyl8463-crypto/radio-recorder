@@ -3,37 +3,42 @@ name: Radio Recorder to Releases
 on:
   schedule:
     - cron: '0 * * * *' # רץ בכל שעה עגולה
-  workflow_dispatch: # מאפשר לך להריץ ידנית
+  workflow_dispatch: # מאפשר לך להריץ ידנית בלחיצת כפתור
+
+env:
+  TZ: 'Asia/Jerusalem' # הגדרת זמן ישראל לשמות הקבצים והריצה
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # חשוב כדי לאפשר העלאת קבצים ל-Releases
+      contents: write # נותן הרשאה ליצור Releases ולהעלות קבצים
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Install FFmpeg
-        # השורה הזו היא הקסם שחסר לנו!
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Install dependencies
-        run: pip install requests
-
       - name: Record Streams
+        # הקוד מריץ את ה-main.py שלך
         run: python main.py
 
       - name: Create Release and Upload
         uses: softprops/action-gh-release@v1
         with:
+          # יצירת תג עם תאריך ושעה של ישראל
           tag_name: recordings-${{ github.run_id }}
-          name: הקלטות מהתאריך ${{ github.run_id }}
+          name: הקלטות - יום ${{ github.run_number }}
           files: "*.mp3"
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
