@@ -2,8 +2,8 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *' # רץ בכל שעה עגולה
+  workflow_dispatch: # מאפשר הרצה ידנית
 
 env:
   TZ: 'Asia/Jerusalem'
@@ -29,11 +29,15 @@ jobs:
           pip install requests
 
       - name: Record Streams
+        # מריץ את קוד הפייתון המשופר עם ה-User-Agent והדיליי
         run: python main.py
+
+      - name: Debug - List Files
+        # שלב זה מציג לנו ביומן אילו קבצי MP3 נוצרו באמת
+        run: ls -lh *.mp3 || echo "No MP3 files found"
 
       - name: Create Release and Upload
         uses: softprops/action-gh-release@v1
-        # הפקודה הזו תבדוק אם נוצרו קבצי MP3 לפני שהיא מנסה להעלות
         if: success()
         with:
           tag_name: recordings-${{ github.run_id }}
