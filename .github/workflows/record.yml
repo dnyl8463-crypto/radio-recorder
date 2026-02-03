@@ -2,8 +2,8 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *' # רץ בכל שעה עגולה, הקוד יבדוק אם שבת
-  workflow_dispatch:
+    - cron: '0 * * * *' # רץ בכל שעה עגולה, הקוד ב-Python יבדוק אם שבת
+  workflow_dispatch: # מאפשר הרצה ידנית בלחיצת כפתור
 
 env:
   TZ: 'Asia/Jerusalem'
@@ -18,23 +18,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          pip install requests # חשוב מאוד בשביל בדיקת השבת!
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
+      - name: Install Dependencies
+        # כאן אנחנו מתקינים את FFmpeg להקלטה ואת requests לבדיקת השבת
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install requests
+
       - name: Record Streams
+        # מריץ את הקוד שבודק שבת ומקליט במקביל
         run: python main.py
 
       - name: Create Release and Upload
         uses: softprops/action-gh-release@v1
-        if: success() # יעלה רק אם ההקלטה בוצעה (ולא דולגה בשבת)
+        if: success() # יעלה את הקבצים רק אם ההקלטה הצליחה (ולא נעצרה בגלל שבת)
         with:
           tag_name: recordings-${{ github.run_id }}
           name: הקלטות - שעה ${{ github.run_number }}
