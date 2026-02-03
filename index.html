@@ -8,14 +8,15 @@
     <style>
         body { font-family: 'Assistant', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
         .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; }
+        h1 { color: #2c3e50; margin-bottom: 5px; }
+        .subtitle { color: #7f8c8d; margin-bottom: 30px; }
         .date-group { margin-top: 30px; border-top: 2px solid #eee; padding-top: 15px; }
-        .date-title { background: #3498db; color: white; display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        .date-title { background: #34495e; color: white; display: inline-block; padding: 5px 18px; border-radius: 20px; font-weight: bold; margin-bottom: 15px; }
         .recording-item { display: flex; align-items: center; justify-content: space-between; background: #fff; margin: 10px 0; padding: 15px; border: 1px solid #ddd; border-radius: 10px; transition: 0.3s; }
         .recording-item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
         .info { text-align: right; flex-grow: 1; }
-        .station-name { font-weight: bold; color: #2980b9; font-size: 1.1em; }
-        .time-label { color: #7f8c8d; font-size: 0.9em; }
+        .station-name { font-weight: bold; color: #2c3e50; font-size: 1.1em; text-transform: capitalize; }
+        .time-label { color: #95a5a6; font-size: 0.9em; }
         audio { height: 35px; margin-right: 15px; }
         #loading { font-size: 1.2em; color: #7f8c8d; margin-top: 50px; }
     </style>
@@ -23,15 +24,14 @@
 <body>
 
 <div class="container">
-    <h1>📻 ארכיון הקלטות אוטומטי</h1>
-    <p>הקלטות מהשבוע האחרון - מתעדכן בכל שעה</p>
+    <h1>📻 Radio Archive</h1>
+    <p class="subtitle">הקלטות אוטומטיות מהשבוע האחרון</p>
     
     <div id="loading">טוען הקלטות מהשרת...</div>
     <div id="recordings-list"></div>
 </div>
 
 <script>
-    // הגדרות המאגר שלך
     const USER = 'dnyl8463-crypto';
     const REPO = 'radio-recorder';
 
@@ -42,7 +42,7 @@
             const listDiv = document.getElementById('recordings-list');
             document.getElementById('loading').style.display = 'none';
 
-            if (!releases.length) {
+            if (!releases || !releases.length) {
                 listDiv.innerHTML = "<p>לא נמצאו הקלטות כרגע.</p>";
                 return;
             }
@@ -50,31 +50,31 @@
             let html = '';
             
             releases.forEach(release => {
-                // חילוץ תאריך מהשם של ה-Release (למשל מהתג)
-                const dateStr = new Date(release.created_at).toLocaleDateString('he-IL', {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                });
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const dateStr = new Date(release.created_at).toLocaleDateString('he-IL', dateOptions);
 
                 html += `<div class="date-group"><div class="date-title">${dateStr}</div>`;
 
                 release.assets.forEach(asset => {
                     if (asset.name.endsWith('.mp3')) {
-                        // ניקוי שם הקובץ לתצוגה יפה
-                        // דוגמה: Kol_Chai_08-00.mp3 -> קול חי (08:00)
-                        const cleanName = asset.name.replace('.mp3', '').replace(/_/g, ' ');
-                        const parts = cleanName.split(' ');
-                        const time = parts.pop();
-                        const station = parts.join(' ');
+                        // חילוץ שם התחנה והשעה מתוך שם הקובץ
+                        // דוגמה: Kol_Chai_14-00.mp3
+                        const fileName = asset.name.replace('.mp3', '');
+                        const parts = fileName.split('_');
+                        
+                        // השעה היא תמיד החלק האחרון (למשל 14-00)
+                        const timeStr = parts.pop().replace('-', ':');
+                        // כל השאר זה שם התחנה (למשל Kol Chai)
+                        const stationName = parts.join(' ');
 
                         html += `
                             <div class="recording-item">
                                 <audio controls preload="none">
                                     <source src="${asset.browser_download_url}" type="audio/mpeg">
-                                    הדפדפן שלך לא תומך בנגן.
                                 </audio>
                                 <div class="info">
-                                    
-                                    <div class="time-label">שעת הקלטה: ${time.replace('-', ':')}</div>
+                                    <div class="station-name">${stationName}</div>
+                                    <div class="time-label">שעה: ${timeStr}</div>
                                 </div>
                             </div>
                         `;
@@ -85,8 +85,8 @@
 
             listDiv.innerHTML = html;
         } catch (error) {
-            console.error("Error fetching recordings:", error);
-            document.getElementById('loading').innerHTML = "שגיאה בטעינת הנתונים. וודא שהמאגר ציבורי.";
+            console.error("Error:", error);
+            document.getElementById('loading').innerHTML = "שגיאה בטעינת הקבצים.";
         }
     }
 
