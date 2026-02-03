@@ -33,11 +33,10 @@ def record_stream(name, url, duration):
     timestamp = datetime.datetime.now().strftime('%H-%M')
     file_name = f"{name}_{timestamp}.mp3"
     
-    # פקודה משופרת עם User-Agent של דפדפן וניסיונות התחברות
+    # פקודה עם התחזות לדפדפן כדי למנוע חסימה
     command = [
         'ffmpeg', '-y',
         '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '20',
         '-i', url, 
         '-t', str(duration), 
         '-acodec', 'copy', 
@@ -47,11 +46,10 @@ def record_stream(name, url, duration):
     try:
         print(f"--- Starting {name} ---")
         subprocess.run(command, check=True, timeout=duration + 300)
-        
-        if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
-            print(f"✅ File created successfully: {file_name} ({os.path.getsize(file_name)} bytes)")
+        if os.path.exists(file_name) and os.path.getsize(file_name) > 1000:
+            print(f"✅ Created: {file_name}")
         else:
-            print(f"⚠️ {name} finished but file is empty or missing.")
+            print(f"⚠️ {name} finished but file is empty.")
     except Exception as e:
         print(f"❌ Error with {name}: {e}")
 
@@ -65,7 +63,7 @@ def main():
         t = threading.Thread(target=record_stream, args=(name, url, RECORD_DURATION))
         threads.append(t)
         t.start()
-        time.sleep(5) # דיליי קטן בין התחנות
+        time.sleep(10) # דיליי של 10 שניות בין תחנה לתחנה
     
     for t in threads:
         t.join()
