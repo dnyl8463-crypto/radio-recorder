@@ -3,18 +3,22 @@ import time
 import datetime
 import requests
 
+# מיפוי שמות לאנגלית כדי למנוע שגיאות העלאה ב-GitHub
 STREAMS = {
-    "קול חי": "https://bit.ly/3S1R9Z9",
-    "קול ברמה": "https://live.kol-barama.co.il/live/kolbarama/playlist.m3u8",
-    "קול חי מיוזיק": "https://bit.ly/3S4kG2R",
-    "קול פליי": "https://live.kol-play.co.il/live/kolplay/playlist.m3u8"
+    "Kol_Chai": "https://bit.ly/3S1R9Z9",
+    "Kol_Barama": "https://live.kol-barama.co.il/live/kolbarama/playlist.m3u8",
+    "Kol_Chai_Music": "https://bit.ly/3S4kG2R",
+    "Kol_Play": "https://live.kol-play.co.il/live/kolplay/playlist.m3u8"
 }
 
 RECORD_DURATION = 30 # לבדיקה, שנה ל-3600 אחר כך
 
 def record_stream(name, url, duration):
-    file_name = f"{name}_{datetime.datetime.now().strftime('%H-%M')}.mp3".replace(" ", "_")
-    print(f"מקליט את {name}...")
+    # שם קובץ נקי באנגלית עם תאריך ושעה
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    file_name = f"{name}_{timestamp}.mp3"
+    
+    print(f"Recording {name}...")
     try:
         r = requests.get(url, stream=True, timeout=15)
         with open(file_name, 'wb') as f:
@@ -23,7 +27,9 @@ def record_stream(name, url, duration):
                 if time.time() - start_time > duration: break
                 if chunk: f.write(chunk)
         return file_name
-    except: return None
+    except Exception as e:
+        print(f"Error recording {name}: {e}")
+        return None
 
 def main():
     recorded_files = []
@@ -32,8 +38,7 @@ def main():
         if file_path:
             recorded_files.append(file_path)
     
-    # הקוד רק מקליט ושומר מקומית, ה-Action יעשה את השאר
-    print(f"סיימתי להקליט: {recorded_files}")
+    print(f"Finished recording: {recorded_files}")
 
 if __name__ == "__main__":
     main()
