@@ -1,12 +1,12 @@
-name: Radio Recorder to Releases
+name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *' # כל שעה עגולה
+    - cron: '0 * * * *' # רץ בכל שעה עגולה
   workflow_dispatch:
 
 env:
-  TZ: 'Asia/Jerusalem' # שעון ישראל
+  TZ: 'Asia/Jerusalem' # הגדרת זמן ישראל
 
 jobs:
   build:
