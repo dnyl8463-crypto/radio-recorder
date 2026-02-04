@@ -1,12 +1,12 @@
-name: Radio Recorder to Releases
+name: Radio Recorder Parallel
 
 on:
   schedule:
     - cron: '0 * * * *' # רץ בכל שעה עגולה
-  workflow_dispatch: # מאפשר הרצה ידנית
+  workflow_dispatch:
 
 env:
-  TZ: 'Asia/Jerusalem' # הגדרת שעון ישראל
+  TZ: 'Asia/Jerusalem' # שעון ישראל
 
 jobs:
   build:
@@ -36,7 +36,7 @@ jobs:
         if: success()
         with:
           tag_name: rec-${{ github.run_id }}
-          name: הקלטות מהתאריך ${{ github.run_id }}
+          name: הקלטות - שעה ${{ github.run_number }}
           files: "*.mp3"
           fail_on_unmatched_files: false
         env:
