@@ -1,12 +1,12 @@
-name: Radio Recorder Parallel
+name: Radio Recorder to Releases
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *' # רץ בכל שעה עגולה
+  workflow_dispatch: # מאפשר הרצה ידנית
 
 env:
-  TZ: 'Asia/Jerusalem'
+  TZ: 'Asia/Jerusalem' # הגדרת שעון ישראל
 
 jobs:
   build:
@@ -17,30 +17,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          pip install requests
+      - name: Install dependencies
+        run: pip install requests
 
       - name: Record Streams
         run: python main.py
 
-      - name: Debug - Show Files
-        run: ls -R recordings/
-
-      - name: Create Release
+      - name: Create Release and Upload
         uses: softprops/action-gh-release@v1
         if: success()
         with:
           tag_name: rec-${{ github.run_id }}
-          name: Recording Hour ${{ github.run_number }}
-          files: recordings/*.mp3
+          name: הקלטות מהתאריך ${{ github.run_id }}
+          files: "*.mp3"
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
