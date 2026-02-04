@@ -5,7 +5,7 @@ import requests
 import threading
 import time
 
-# הלינקים שציינת שעבדו לך
+# הלינקים שביקשת
 STREAMS = {
     "Kol_Chai": "https://cdn.livecast.co.il/radio-kolchai-mp3/stream",
     "Kol_Barama": "https://kbr.livecast.co.il/kolbarama-mp3/stream",
@@ -13,13 +13,13 @@ STREAMS = {
     "Kol_Play": "http://live.streamgates.net/radio/kolplay/icecast.audio"
 }
 
-RECORD_DURATION = 60 # שעה אחת (שנה ל-60 רק לבדיקה אם תרצה)
+RECORD_DURATION = 60 # דקה אחת
 
 def is_it_shabbat():
     """בודק האם עכשיו שבת בירושלים"""
     try:
-        # פנייה ל-API של Hebcal לקבלת זמני שבת
-        response = requests.get("https://www.hebcal.com/shabbat?cfg=json&geonameid=281184&m=50", timeout=10)
+        # בדיקה מול Hebcal
+        response = requests.get("https://www.hebcal.com/shabbat?cfg=json&geonameid=281184&m=50", timeout=15)
         data = response.json()
         now_utc = datetime.datetime.now(datetime.timezone.utc)
         
@@ -31,43 +31,46 @@ def is_it_shabbat():
         end_shabbat = datetime.datetime.fromisoformat(havdalah)
         
         return start_shabbat <= now_utc <= end_shabbat
-    except Exception as e:
-        print(f"Shabbat check failed, skipping: {e}")
-        return False
+    except:
+        return datetime.datetime.now().weekday() == 5 # גיבוי ליום שבת
 
 def record_stream(name, url, duration):
-    # הגדרת שם הקובץ עם תאריך ושעה בשעון ישראל
+    # שימוש בשעון ישראל לשם הקובץ
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
     file_name = f"{name}_{timestamp}.mp3"
     
     print(f"--- Starting Parallel Recording: {name} ---")
     
+    # פקודת FFmpeg משופרת עם 'reconnect' כדי למנוע את ה-Timeout שראינו בתמונה
     command = [
-        'ffmpeg', '-y', '-i', url, '-t', str(duration), '-acodec', 'copy', file_name
+        'ffmpeg', '-y',
+        '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '10',
+        '-i', url,
+        '-t', str(duration),
+        '-acodec', 'copy',
+        file_name
     ]
     
     try:
-        subprocess.run(command, check=True, timeout=duration + 60)
+        # הרצה עם הגדרת זמן מקסימלית כדי שלא ייתקע
+        subprocess.run(command, check=True, timeout=duration + 120)
         if os.path.exists(file_name) and os.path.getsize(file_name) > 10000:
-            print(f"✅ Created: {file_name}")
+            print(f"✅ Success: {file_name}")
     except Exception as e:
         print(f"❌ Failed {name}: {e}")
 
 def main():
-    # בדיקת שבת - אם שבת, עוצרים הכל
     if is_it_shabbat():
-        print("🕯️ Shabbat detected. Recording cancelled.")
+        print("🕯️ Shabbat detected. Skipping recordings.")
         return
 
     threads = []
     for name, url in STREAMS.items():
-        # הפעלה במקביל של כל התחנות
         t = threading.Thread(target=record_stream, args=(name, url, RECORD_DURATION))
         threads.append(t)
         t.start()
-        time.sleep(1) # השהייה קלה כדי לא להעמיס על המעבד בשנייה אחת
+        time.sleep(5) # השהייה קלה בין פתיחת החיבורים כדי למנוע חסימת ה-IP של GitHub
     
-    # מחכים שכל ההקלטות יסתיימו
     for t in threads:
         t.join()
 
