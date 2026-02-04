@@ -2,8 +2,8 @@ name: Cleanup Old Recordings
 
 on:
   schedule:
-    - cron: '0 0 * * *' # רץ בכל לילה בחצות
-  workflow_dispatch: # מאפשר לך להפעיל ניקוי ידני
+    - cron: '0 2 * * *' # ירוץ כל לילה ב-2 לפנות בוקר
+  workflow_dispatch: # מאפשר לך להריץ את זה ידנית אם תרצה
 
 jobs:
   delete-old-releases:
@@ -12,9 +12,9 @@ jobs:
       contents: write
     steps:
       - name: Delete releases older than 7 days
-        uses: dev-drprasad/delete-older-releases@v0.2.1
+        uses: dev-drprasad/delete-older-releases@v0.3.3
         with:
-          keep_latest: 5 # תמיד ישמור את 5 ההקלטות האחרונות, ליתר ביטחון
-          older_than: 7d # מוחק כל מה שנוצר לפני יותר משבוע
+          keep_latest: 0      # אל תשמור מספר קבוע של Releases
+          older_than: 7d      # מחק כל מה שישן יותר מ-7 ימים בדיוק
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
