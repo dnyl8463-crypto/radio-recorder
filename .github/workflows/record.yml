@@ -37,6 +37,6 @@ jobs:
           tag_name: rec-${{ github.run_id }}
           name: הקלטות - שעה ${{ github.run_number }}
           files: "*.mp3"
-          fail_on_unmatched_files: false # מונע את שגיאה 422 אם קובץ ריק
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
