@@ -2,11 +2,11 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *' # כל שעה עגולה
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 env:
-  TZ: 'Asia/Jerusalem' # חשוב מאוד לשמות הקבצים ולשעות
+  TZ: 'Asia/Jerusalem'
 
 jobs:
   build:
@@ -19,7 +19,7 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Record Streams
+      - name: Record
         run: python main.py
 
       - name: Create Release
@@ -37,6 +37,6 @@ jobs:
           tag_name: rec-${{ github.run_id }}
           name: הקלטות - שעה ${{ github.run_number }}
           files: "*.mp3"
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: false # מונע את שגיאה 422 אם קובץ ריק
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
