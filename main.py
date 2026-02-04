@@ -13,7 +13,7 @@ STREAMS = {
     "Kol_Play": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
 }
 
-RECORD_DURATION = 3600 # שעה אחת
+RECORD_DURATION = 60 # דקה אחת
 
 def is_it_shabbat():
     try:
