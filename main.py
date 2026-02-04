@@ -14,7 +14,7 @@ STREAMS = {
 }
 
 # זמן הקלטה - שעה (שנה ל-60 רק לבדיקה מהירה)
-RECORD_DURATION = 3600 
+RECORD_DURATION = 60 
 
 def is_it_shabbat():
     """בודק שבת לפי שעון ישראל"""
