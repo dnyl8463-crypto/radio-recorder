@@ -13,7 +13,7 @@ STREAMS = {
     "Kol_Play": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
 }
 
-RECORD_DURATION = 60 # דקה אחת
+RECORD_DURATION = 3600 # שעה אחת (שנה ל-60 לבדיקה מהירה)
 
 def is_it_shabbat():
     try:
@@ -31,41 +31,36 @@ def record_stream(name, url, duration):
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
     file_name = f"{name}_{timestamp}.mp3"
     
-    print(f"--- Starting recording: {name} ---")
+    print(f"--- Starting recording and encoding: {name} ---")
     
-    # בסיס הפקודה
+    # פקודה עם התחזות לדפדפן והגדרה של המרה ל-MP3
     command = [
         'ffmpeg', '-y',
         '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
         '-i', url,
-        '-t', str(duration)
+        '-t', str(duration),
+        '-acodec', 'libmp3lame', # המרה אקטיבית ל-MP3
+        '-ab', '128k',           # איכות שמע טובה
+        '-ar', '44100',          # קצב דגימה סטנדרטי
+        file_name
     ]
-
-    # התאמה לפי תחנה
-    if name == "Kol_Chai_Music":
-        # המרה מ-AAC ל-MP3 עבור קול חי מיוזיק
-        command += ['-acodec', 'libmp3lame', '-ab', '128k', file_name]
-    else:
-        # העתקה ישירה עבור השאר (חוסך זמן ומשאבים)
-        command += ['-acodec', 'copy', file_name]
     
     try:
-        # הרצה
-        subprocess.run(command, check=True, timeout=duration + 120)
+        # הרצה עם זמן הגנה
+        subprocess.run(command, check=True, timeout=duration + 150)
         
-        # בדיקת תקינות הקובץ
-        if os.path.exists(file_name) and os.path.getsize(file_name) > 10000:
+        if os.path.exists(file_name) and os.path.getsize(file_name) > 15000:
             print(f"✅ Success: {file_name} ({os.path.getsize(file_name)} bytes)")
         else:
             if os.path.exists(file_name): os.remove(file_name)
-            print(f"⚠️ {name} result was empty or too small")
+            print(f"⚠️ {name} result was too small or empty")
     except Exception as e:
         if os.path.exists(file_name): os.remove(file_name)
         print(f"❌ Error recording {name}: {e}")
 
 def main():
     if is_it_shabbat():
-        print("🕯️ Shabbat - Recording skipped")
+        print("🕯️ Shabbat - Skipping")
         return
 
     threads = []
@@ -73,7 +68,7 @@ def main():
         t = threading.Thread(target=record_stream, args=(name, url, RECORD_DURATION))
         threads.append(t)
         t.start()
-        time.sleep(10) # המתנה בין פתיחת חיבורים
+        time.sleep(12) # המתנה משמעותית בין התחנות כדי למנוע חסימת IP של GitHub
     
     for t in threads:
         t.join()
