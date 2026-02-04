@@ -5,7 +5,7 @@ import requests
 import threading
 import time
 
-# הלינקים הכי יציבים ששלחת
+# הלינקים הכי מעודכנים ששלחת
 STREAMS = {
     "Kol_Chai": "https://live.kcm.fm/live-new",
     "Kol_Barama": "https://cdn.cybercdn.live/Kol_Barama/Live_Audio/icecast.audio",
@@ -13,7 +13,7 @@ STREAMS = {
     "Kol_Play": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
 }
 
-RECORD_DURATION = 60 # דקה אחת
+RECORD_DURATION = 3600 # שעה אחת
 
 def is_it_shabbat():
     try:
@@ -31,11 +31,14 @@ def record_stream(name, url, duration):
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
     file_name = f"{name}_{timestamp}.mp3"
     
-    # פקודת FFmpeg משופרת עם 'timeout' ו-'user_agent' למניעת השגיאות שראינו בתמונות
+    print(f"--- Launching parallel recording for {name} ---")
+    
+    # פקודת FFmpeg משופרת עם הגדרות עקיפת חסימה
     command = [
         'ffmpeg', '-y',
-        '-timeout', '20000000', # 20 שניות המתנה לחיבור
+        '-timeout', '30000000', # המתנה של 30 שניות לחיבור ראשוני
         '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+        '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '10',
         '-i', url,
         '-t', str(duration),
         '-acodec', 'copy',
@@ -43,12 +46,14 @@ def record_stream(name, url, duration):
     ]
     
     try:
-        print(f"--- Launching {name} ---")
+        # הרצה עם מרווח ביטחון של 5 דקות
         subprocess.run(command, check=True, timeout=duration + 300)
+        
         if os.path.exists(file_name) and os.path.getsize(file_name) > 1000:
             print(f"✅ Created: {file_name} ({os.path.getsize(file_name)} bytes)")
         else:
-            print(f"⚠️ {name} failed: File is empty")
+            if os.path.exists(file_name): os.remove(file_name)
+            print(f"⚠️ {name} failed: Stream provided no data")
     except Exception as e:
         print(f"❌ {name} error: {e}")
 
@@ -62,7 +67,8 @@ def main():
         t = threading.Thread(target=record_stream, args=(name, url, RECORD_DURATION))
         threads.append(t)
         t.start()
-        time.sleep(5) # השהייה קלה כדי לא לחסום את ה-IP
+        # המתנה של 7 שניות בין תחנה לתחנה כדי לא לעורר את הגנות השרתים
+        time.sleep(7) 
     
     for t in threads:
         t.join()
