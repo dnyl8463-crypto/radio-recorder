@@ -1,8 +1,8 @@
-name: Radio Recorder Parallel
+name: Radio Recorder to Releases
 
 on:
   schedule:
-    - cron: '0 * * * *' # רץ בכל שעה עגולה
+    - cron: '0 * * * *' # כל שעה עגולה
   workflow_dispatch:
 
 env:
