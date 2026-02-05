@@ -12,9 +12,6 @@ STREAMS = {
     "Kol_Play": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
 }
 
-# 59 דקות הקלטה
-RECORD_DURATION = 3540 
-
 def is_it_shabbat():
     try:
         r = requests.get("https://www.hebcal.com/shabbat?cfg=json&geonameid=281184&m=50", timeout=10)
@@ -43,12 +40,13 @@ def record_stream(name, url, duration):
     ]
     
     try:
-        subprocess.run(command, check=True, timeout=duration + 150)
-        if os.path.exists(file_name) and os.path.getsize(file_name) > 20000:
+        # הרצה עם הגנה
+        subprocess.run(command, check=True, timeout=duration + 120)
+        
+        if os.path.exists(file_name) and os.path.getsize(file_name) > 50000:
             print(f"✅ Success: {file_name}")
         else:
             if os.path.exists(file_name): os.remove(file_name)
-            print(f"⚠️ {name} failed: small file.")
     except Exception as e:
         if os.path.exists(file_name): os.remove(file_name)
         print(f"❌ Error {name}: {e}")
@@ -60,29 +58,31 @@ def main():
 
     now = datetime.datetime.now()
     
-    # אם הגענו מוקדם (דקות 50-59) - נחכה לשעה העגולה
+    # סנכרון להתחלה מדויקת
     if now.minute >= 50:
         seconds_to_wait = ((60 - now.minute) * 60) - now.second
-        print(f"🕒 Started early ({now.strftime('%H:%M:%S')}). Waiting {seconds_to_wait} seconds...")
+        print(f"🕒 Waiting {seconds_to_wait}s until the top of the hour...")
         time.sleep(seconds_to_wait)
-    
-    # אם הגענו בדקה 1 עד 10 - נתחיל מיד (זה אומר שזה הגיבוי או שהיה איחור)
-    elif 1 <= now.minute <= 10:
-        print(f"🕒 Backup trigger or slight delay. Starting now: {now.strftime('%H:%M:%S')}")
-    
-    # אם הגענו סתם באמצע השעה (מעל דקה 10) - אל תקליט כדי למנוע כפילויות
-    elif now.minute > 10:
-        print(f"🕒 Current minute is {now.minute}. Skipping to avoid double recording.")
-        return
+        now = datetime.datetime.now()
 
-    print(f"🚀 Final start time: {datetime.datetime.now().strftime('%H:%M:%S')}")
+    # חישוב זמן עד סוף השעה (לדקה 00:00 של השעה הבאה)
+    # אנחנו מוסיפים שעה אחת וקובעים את הדקות והשניות ל-0
+    target_end_time = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    
+    duration = int((target_end_time - now).total_seconds())
+
+    # הגנה למקרה שהזמן שחושב ארוך מ-60 דקות בגלל סטיות קטנות
+    if duration > 3600:
+        duration = 3600
+
+    print(f"🚀 Starting 60-min recording session at {now.strftime('%H:%M:%S')}. Duration: {duration}s")
 
     threads = []
     for name, url in STREAMS.items():
-        t = threading.Thread(target=record_stream, args=(name, url, RECORD_DURATION))
+        t = threading.Thread(target=record_stream, args=(name, url, duration))
         threads.append(t)
         t.start()
-        time.sleep(12) 
+        time.sleep(10) 
     
     for t in threads:
         t.join()
