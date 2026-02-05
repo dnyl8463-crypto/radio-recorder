@@ -2,9 +2,9 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
-
+    - cron: '0 * * * *'  # ניסיון ראשון: דקה 00 בכל שעה
+    - cron: '4 * * * *'  # ניסיון גיבוי: דקה 04 בכל שעה
+  workflow_dispatch:     # כפתור הפעלה ידנית
 env:
   TZ: 'Asia/Jerusalem'
 
