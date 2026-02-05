@@ -2,41 +2,50 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *'  # ניסיון ראשון: דקה 00 בכל שעה
-    - cron: '4 * * * *'  # ניסיון גיבוי: דקה 04 בכל שעה
-  workflow_dispatch:     # כפתור הפעלה ידנית
-env:
-  TZ: 'Asia/Jerusalem'
+    - cron: '0 * * * *'  # הרצה ראשית בשעה עגולה
+    - cron: '4 * * * *'  # הרצה לגיבוי אם השעה העגולה פוספסה
+  workflow_dispatch:     # כפתור להרצה ידנית
 
 jobs:
-  build:
+  record:
     runs-on: ubuntu-latest
+    # מאפשר לסקריפט לכתוב Releases
     permissions:
       contents: write
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Install dependencies
-        run: pip install requests
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install requests
 
-      - name: Record
+      - name: Run Recording Script
+        # מריץ את הפייתון שמתזמן את הכל ומחשב את הזמן לסוף השעה
         run: python main.py
 
-      - name: Create Release
+      - name: Check for Files
+        # שלב עזר כדי לראות ב-Logs מה הוקלט בהצלחה
+        run: ls -lah *.mp3 || echo "No mp3 files found"
+
+      - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v1
-        if: always()
+        # התנאי הזה מונע שגיאה אם כל ההקלטות נכשלו (לא ינסה ליצור Release ריק)
+        if: hashFiles('*.mp3') != ''
         with:
-          tag_name: rec-${{ github.run_id }}
-          name: הקלטות - שעה ${{ github.run_number }}
+          tag_name: rec-${{ github.run_id }}-${{ github.run_number }}
+          name: הקלטות - שעה ${{ github.run_number }} - ${{ github.run_id }}
           files: "*.mp3"
           fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
