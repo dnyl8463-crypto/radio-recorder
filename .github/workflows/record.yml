@@ -2,50 +2,37 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *'  # הרצה ראשית בשעה עגולה
-    - cron: '4 * * * *'  # הרצה לגיבוי אם השעה העגולה פוספסה
-  workflow_dispatch:     # כפתור להרצה ידנית
+    - cron: '0 * * * *'  # רק בשעה עגולה
+    - cron: '5 * * * *'  # גיבוי ב-5 דקות אחרי, אבל ה-concurrency ימנע כפילות
+  workflow_dispatch:
+
+# מונע הרצה של שני סקריפטים במקביל
+concurrency:
+  group: recording
+  cancel-in-progress: false 
 
 jobs:
   record:
     runs-on: ubuntu-latest
-    # מאפשר לסקריפט לכתוב Releases
     permissions:
       contents: write
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y ffmpeg
           pip install requests
-
-      - name: Run Recording Script
-        # מריץ את הפייתון שמתזמן את הכל ומחשב את הזמן לסוף השעה
-        run: python main.py
-
-      - name: Check for Files
-        # שלב עזר כדי לראות ב-Logs מה הוקלט בהצלחה
-        run: ls -lah *.mp3 || echo "No mp3 files found"
-
-      - name: Create Release and Upload Assets
+      - run: python main.py
+      - name: Release
         uses: softprops/action-gh-release@v1
-        # התנאי הזה מונע שגיאה אם כל ההקלטות נכשלו (לא ינסה ליצור Release ריק)
         if: hashFiles('*.mp3') != ''
         with:
-          tag_name: rec-${{ github.run_id }}-${{ github.run_number }}
-          name: הקלטות - שעה ${{ github.run_number }} - ${{ github.run_id }}
+          tag_name: tag-${{ github.run_id }}
+          # הכותרת תכלול את השעה כדי שתבין מתי זה הוקלט
+          name: הקלטה מהשעה ${{ github.run_number }}
           files: "*.mp3"
-          fail_on_unmatched_files: false
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
