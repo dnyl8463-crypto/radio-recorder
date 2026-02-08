@@ -12,21 +12,19 @@ STREAMS = {
 }
 
 def wait_for_top_of_hour():
-    """לולאה שבודקת כל שנייה מתי מתחילה השעה החדשה"""
-    print("⏳ Waiting for the exact start of the next hour...")
+    print("⏳ Waiting for the exact start of the next hour (Israel Time)...")
     while True:
-        # זמן ישראל
-        now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-        if now.minute == 0 and now.second == 0:
-            print(f"⏰ IT'S TIME! Starting recordings at: {now.strftime('%H:%M:%S')}")
-            break
-        time.sleep(0.5) # בדיקה פעמיים בשנייה לדיוק מקסימלי
+        israel_now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        if israel_now.minute == 0 and israel_now.second == 0:
+            print(f"⏰ IT'S TIME! Starting: {israel_now.strftime('%H:%M:%S')}")
+            return israel_now # מחזירים את השעה המדויקת של תחילת ההקלטה
+        time.sleep(0.5)
 
-def record_stream(name, url):
-    # הקלטה ל-60 דקות בדיוק (3600 שניות)
+def record_stream(name, url, start_time):
     duration = 3600
-    israel_time = (datetime.datetime.utcnow() + datetime.timedelta(hours=2)).strftime('%Y-%m-%d_%H-%M')
-    file_name = f"{name}_{israel_time}.mp3"
+    # כאן הקסם: השם נקבע לפי זמן ההתחלה המדויק (למשל 18:00) ולא זמן ההתעוררות (17:55)
+    file_timestamp = start_time.strftime('%Y-%m-%d_%H-%M')
+    file_name = f"{name}_{file_timestamp}.mp3"
     
     command = [
         'ffmpeg', '-y',
@@ -45,22 +43,21 @@ def record_stream(name, url):
         if os.path.exists(file_name): os.remove(file_name)
 
 def main():
-    # בדיקת שבת (לפי יום ושעה בישראל)
+    # בדיקת שבת
     israel_now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
     weekday = israel_now.weekday()
     if (weekday == 4 and israel_now.hour >= 16) or (weekday == 5 and israel_now.hour < 19):
-        print("🕯️ Shabbat - Skipping")
         return
 
-    # מנגנון ההמתנה לשנייה ה-0
-    wait_for_top_of_hour()
+    # מחכים ל-00:00 ומקבלים את השעה העגולה
+    start_time = wait_for_top_of_hour()
 
     threads = []
     for name, url in STREAMS.items():
-        t = threading.Thread(target=record_stream, args=(name, url))
+        t = threading.Thread(target=record_stream, args=(name, url, start_time))
         threads.append(t)
         t.start()
-        time.sleep(2) # מרווח קצר כדי לא להעמיס את המעבד בבת אחת
+        time.sleep(2)
     
     for t in threads:
         t.join()
