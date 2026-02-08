@@ -2,13 +2,8 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '55 * * * *'  # מתחיל ב-55 דקות של כל שעה כדי להתכונן ל-00:00
+    - cron: '55 * * * *' # מתעורר ב-55 כדי להיות מוכן ב-00
   workflow_dispatch:
-
-# מונע הרצה של שני סקריפטים במקביל
-concurrency:
-  group: recording
-  cancel-in-progress: false 
 
 jobs:
   record:
@@ -24,14 +19,21 @@ jobs:
         run: |
           sudo apt-get install -y ffmpeg
           pip install requests
-      - run: python main.py
-      - name: Release
+      
+      - name: Run Script
+        run: python main.py
+
+      - name: Set Israel Time for Release Name
+        # יצירת משתנה שנוכל להשתמש בו בשם של ה-Release
+        run: echo "REL_DATE=$(date -d '+2 hours' +'%Y-%m-%d %H:00')" >> $GITHUB_ENV
+
+      - name: Upload Release
         uses: softprops/action-gh-release@v1
         if: hashFiles('*.mp3') != ''
         with:
-          tag_name: tag-${{ github.run_id }}
-          # הכותרת תכלול את השעה כדי שתבין מתי זה הוקלט
-          name: הקלטה מהשעה ${{ github.run_number }}
+          # שם ה-Release יהיה למשל: "הקלטה שעה 18:00 - 2024-05-20"
+          tag_name: rec-${{ github.run_id }}
+          name: הקלטה שעה ${{ env.REL_DATE }}
           files: "*.mp3"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
