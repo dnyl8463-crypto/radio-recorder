@@ -2,8 +2,7 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *'  # רק בשעה עגולה
-    - cron: '5 * * * *'  # גיבוי ב-5 דקות אחרי, אבל ה-concurrency ימנע כפילות
+    - cron: '55 * * * *'  # מתחיל ב-55 דקות של כל שעה כדי להתכונן ל-00:00
   workflow_dispatch:
 
 # מונע הרצה של שני סקריפטים במקביל
