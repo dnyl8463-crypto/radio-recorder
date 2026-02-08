@@ -1,7 +1,6 @@
 import os
 import subprocess
 import datetime
-import requests
 import threading
 import time
 
@@ -12,19 +11,20 @@ STREAMS = {
     "Kol_Play": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
 }
 
-def is_it_shabbat():
-    try:
-        r = requests.get("https://www.hebcal.com/shabbat?cfg=json&geonameid=281184&m=50", timeout=10)
-        data = r.json()
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
-        items = data['items']
-        start = datetime.datetime.fromisoformat(next(i['date'] for i in items if i['category'] == 'candles'))
-        end = datetime.datetime.fromisoformat(next(i['date'] for i in items if i['category'] == 'havdalah'))
-        return start <= now_utc <= end
-    except: return False
+def wait_for_top_of_hour():
+    """לולאה שבודקת כל שנייה מתי מתחילה השעה החדשה"""
+    print("⏳ Waiting for the exact start of the next hour...")
+    while True:
+        # זמן ישראל
+        now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        if now.minute == 0 and now.second == 0:
+            print(f"⏰ IT'S TIME! Starting recordings at: {now.strftime('%H:%M:%S')}")
+            break
+        time.sleep(0.5) # בדיקה פעמיים בשנייה לדיוק מקסימלי
 
-def record_stream(name, url, duration):
-    # שימוש בזמן ישראל לשם הקובץ
+def record_stream(name, url):
+    # הקלטה ל-60 דקות בדיוק (3600 שניות)
+    duration = 3600
     israel_time = (datetime.datetime.utcnow() + datetime.timedelta(hours=2)).strftime('%Y-%m-%d_%H-%M')
     file_name = f"{name}_{israel_time}.mp3"
     
@@ -38,32 +38,29 @@ def record_stream(name, url, duration):
     try:
         subprocess.run(command, check=True, timeout=duration + 300)
         if os.path.exists(file_name) and os.path.getsize(file_name) > 50000:
-            print(f"✅ Success: {file_name}")
+            print(f"✅ Finished: {file_name}")
         else:
             if os.path.exists(file_name): os.remove(file_name)
     except:
         if os.path.exists(file_name): os.remove(file_name)
 
 def main():
-    if is_it_shabbat(): return
+    # בדיקת שבת (לפי יום ושעה בישראל)
+    israel_now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+    weekday = israel_now.weekday()
+    if (weekday == 4 and israel_now.hour >= 16) or (weekday == 5 and israel_now.hour < 19):
+        print("🕯️ Shabbat - Skipping")
+        return
 
-    now = datetime.datetime.utcnow() + datetime.timedelta(hours=2) # זמן ישראל
-    
-    # חישוב זמן עד סוף השעה (60 דקות מלאות)
-    target_end_time = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-    duration = int((target_end_time - now).total_seconds())
-    
-    if duration > 3600: duration = 3600
-    if duration < 300: return # אם נשארו פחות מ-5 דקות לשעה, אל תקליט (מונע כפילויות)
-
-    print(f"🚀 Starting session at Israel Time: {now.strftime('%H:%M:%S')}")
+    # מנגנון ההמתנה לשנייה ה-0
+    wait_for_top_of_hour()
 
     threads = []
     for name, url in STREAMS.items():
-        t = threading.Thread(target=record_stream, args=(name, url, duration))
+        t = threading.Thread(target=record_stream, args=(name, url))
         threads.append(t)
         t.start()
-        time.sleep(10)
+        time.sleep(2) # מרווח קצר כדי לא להעמיס את המעבד בבת אחת
     
     for t in threads:
         t.join()
