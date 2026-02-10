@@ -11,42 +11,30 @@ STREAMS = {
     "Kol_Play": "https://cdn.cybercdn.live/Kol_Barama/Music/icecast.audio"
 }
 
-def wait_for_top_of_hour():
-    print("⏳ Server is ready. Waiting for the exact top of the hour (00:00:00)...")
-    while True:
-        # זמן ישראל (UTC+2)
-        now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-        
-        # אם הגענו לשנייה ה-0 של הדקה ה-0
-        if now.minute == 0 and now.second == 0:
-            print(f"⏰ STARTING NOW: {now.strftime('%H:%M:%S')}")
-            return now
-        
-        # בדיקה מהירה כל חצי שנייה לדיוק מקסימלי
-        time.sleep(0.5)
+def is_it_shabbat():
+    # בדיקה פשוטה לפי יום ושעה (זמן ישראל)
+    now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+    weekday = now.weekday() # 4=Friday, 5=Saturday
+    if (weekday == 4 and now.hour >= 16) or (weekday == 5 and now.hour < 19):
+        return True
+    return False
 
-def record_stream(name, url, start_time):
-    # הקלטה של 3600 שניות = 60 דקות מלאות
-    duration = 3600 
-    
-    # שם הקובץ יהיה השעה העגולה (למשל 18-00)
-    file_timestamp = start_time.strftime('%Y-%m-%d_%H-%M')
-    file_name = f"{name}_{file_timestamp}.mp3"
+def record_stream(name, url):
+    # הקלטה ל-60 דקות (3600 שניות)
+    duration = 3600
+    israel_time = (datetime.datetime.utcnow() + datetime.timedelta(hours=2)).strftime('%Y-%m-%d_%H-%M')
+    file_name = f"{name}_{israel_time}.mp3"
     
     command = [
         'ffmpeg', '-y',
         '-user_agent', 'Mozilla/5.0',
-        '-i', url,
-        '-t', str(duration),
-        '-acodec', 'libmp3lame',
-        '-ab', '128k',
-        '-ar', '44100',
-        file_name
+        '-i', url, '-t', str(duration),
+        '-acodec', 'libmp3lame', '-ab', '128k', '-ar', '44100', file_name
     ]
     
     try:
-        # הרצה עם חריגת זמן קטנה לביטחון
-        subprocess.run(command, check=True, timeout=duration + 120)
+        # הרצה עם חריגת זמן לביטחון
+        subprocess.run(command, check=True, timeout=duration + 300)
         if os.path.exists(file_name) and os.path.getsize(file_name) > 50000:
             print(f"✅ Success: {file_name}")
         else:
@@ -55,23 +43,18 @@ def record_stream(name, url, start_time):
         if os.path.exists(file_name): os.remove(file_name)
 
 def main():
-    # בדיקת שבת (לפי זמן ישראל)
-    israel_now = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-    weekday = israel_now.weekday()
-    if (weekday == 4 and israel_now.hour >= 16) or (weekday == 5 and israel_now.hour < 19):
-        print("🕯️ Shabbat mode - Skipping")
+    if is_it_shabbat():
+        print("🕯️ Shabbat - Skipping")
         return
 
-    # המתנה ליריית הפתיחה
-    actual_start_time = wait_for_top_of_hour()
+    print(f"🚀 Starting 60-minute recording session...")
 
     threads = []
     for name, url in STREAMS.items():
-        # כל תחנה מקבלת פקודה להקליט 60 דקות
-        t = threading.Thread(target=record_stream, args=(name, url, actual_start_time))
+        t = threading.Thread(target=record_stream, args=(name, url))
         threads.append(t)
         t.start()
-        time.sleep(1) # השהייה קלה כדי לא להעמיס את המעבד בשנייה הראשונה
+        time.sleep(5) # מרווח קצר למניעת עומס
     
     for t in threads:
         t.join()
