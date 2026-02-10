@@ -3,12 +3,12 @@ name: Radio Recorder Parallel
 on:
   schedule:
     - cron: '0 * * * *'  # בשעה עגולה
-    - cron: '5 * * * *'  # גיבוי ב-5 דקות אחרי למקרה ש-GitHub איחר
+    - cron: '5 * * * *'  # גיבוי דקה 5
   workflow_dispatch:
 
 concurrency:
   group: radio-recording
-  cancel-in-progress: true # אם השעה החדשה הגיעה, סוגרים את הישנה מיד
+  cancel-in-progress: false # לא לבטל, כדי שההקלטה תסתיים ותעלה
 
 jobs:
   record:
@@ -30,7 +30,7 @@ jobs:
         if: hashFiles('*.mp3') != ''
         with:
           tag_name: tag-${{ github.run_id }}-${{ github.run_number }}
-          name: הקלטה שעה עגולה - ${{ github.run_number }}
+          name: הקלטה שעה ${{ github.run_number }}
           files: "*.mp3"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
