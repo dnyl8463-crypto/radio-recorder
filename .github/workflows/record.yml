@@ -2,8 +2,13 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '55 * * * *' # מתעורר 5 דקות לפני השעה כדי "לתפוס" את ה-00:00:00
+    - cron: '0 * * * *'  # בשעה עגולה
+    - cron: '5 * * * *'  # גיבוי ב-5 דקות אחרי למקרה ש-GitHub איחר
   workflow_dispatch:
+
+concurrency:
+  group: radio-recording
+  cancel-in-progress: true # אם השעה החדשה הגיעה, סוגרים את הישנה מיד
 
 jobs:
   record:
@@ -19,18 +24,13 @@ jobs:
         run: |
           sudo apt-get install -y ffmpeg
           pip install requests
-      
-      - name: Run Recording Script
-        # זה ירוץ במשך שעה ו-5 דקות בערך (5 דקות המתנה + 60 דקות הקלטה)
-        run: python main.py
-
-      - name: Create Release
+      - run: python main.py
+      - name: Release
         uses: softprops/action-gh-release@v1
         if: hashFiles('*.mp3') != ''
         with:
-          tag_name: rec-${{ github.run_id }}
-          # השם שיוצג באתר יהיה השעה שבה ההקלטה התחילה
-          name: הקלטה שעה עגולה
+          tag_name: tag-${{ github.run_id }}-${{ github.run_number }}
+          name: הקלטה שעה עגולה - ${{ github.run_number }}
           files: "*.mp3"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
