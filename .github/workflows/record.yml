@@ -2,46 +2,32 @@ name: Radio Recorder Parallel
 
 on:
   schedule:
-    - cron: '0 * * * *'  # רץ בכל שעה עגולה
-  workflow_dispatch:     # מאפשר לך להפעיל ידנית מתי שבא לך
+    - cron: '0 * * * *' # יבדוק כל שעה אם צריך להתחיל
+  workflow_dispatch:
 
 jobs:
   record:
     runs-on: ubuntu-latest
+    # הגדרת זמן ריצה מקסימלי ל-8 שעות כדי שלא ייקטע בלילה
+    timeout-minutes: 480 
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set Israel Time
-        # הפקודה הזו יוצרת משתנה תאריך לפי שעון ישראל (UTC+2)
-        # היא תעדכן את התאריך והשעה אוטומטית בכל פעם שהסקריפט נדלק
-        run: |
-          echo "ISRAEL_TIME=$(TZ='Asia/Jerusalem' date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
-          echo "SHORT_DATE=$(TZ='Asia/Jerusalem' date +'%d-%m-%Y')" >> $GITHUB_ENV
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-
       - name: Install dependencies
         run: |
           sudo apt-get install -y ffmpeg
           pip install requests
-
-      - name: Run Recording
-        run: python main.py
-
-      - name: Create Release
+      - run: python main.py
+      - name: Release
         uses: softprops/action-gh-release@v1
         if: hashFiles('*.mp3') != ''
         with:
-          # כאן אנחנו משתמשים בתאריך שיצרנו למעלה
-          tag_name: "rec-${{ github.run_id }}-${{ github.run_number }}"
-          name: "הקלטות יום ${{ env.SHORT_DATE }} שעה ${{ env.ISRAEL_TIME }}"
+          tag_name: "night-${{ github.run_id }}"
+          name: "הקלטה - ${{ github.run_number }}"
           files: "*.mp3"
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
